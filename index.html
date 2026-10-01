@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full bg-slate-50">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>School Portal</title>
+  <meta name="theme-color" content="#4f46e5">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <link rel="manifest" href="/manifest.json">
+  <link rel="icon" type="image/svg+xml" href="/icon.svg">
+  <link rel="stylesheet" href="/src/style.css">
+  <style>
+    .pb-safe { padding-bottom: max(1rem, env(safe-area-inset-bottom)); }
+    .pt-safe { padding-top: max(1rem, env(safe-area-inset-top)); }
+    [x-cloak] { display: none !important; }
+    #qr-viewfinder { border: none !important; border-radius: 1rem; overflow: hidden; }
+    #qr-viewfinder video { border-radius: 1rem; object-fit: cover; }
+    #qr-viewfinder img { display: none !important; }
+  </style>
+</head>
+<body class="h-full antialiased font-sans text-slate-800 select-none" x-data="schoolApp" x-cloak>
+
+  <!-- Global Toast Alert -->
+  <div x-show="errorMsg || successMsg" 
+       x-transition:enter="transition ease-out duration-300 transform"
+       x-transition:enter-start="-translate-y-full opacity-0"
+       x-transition:enter-end="translate-y-0 opacity-100"
+       x-transition:leave="transition ease-in duration-200 transform"
+       x-transition:leave-start="translate-y-0 opacity-100"
+       x-transition:leave-end="-translate-y-full opacity-0"
+       class="fixed top-3 left-4 right-4 z-50 flex items-center justify-between p-3.5 rounded-xl shadow-lg border text-sm font-medium"
+       :class="errorMsg ? 'bg-rose-50 border-rose-200 text-rose-800' : 'bg-emerald-50 border-emerald-200 text-emerald-800'">
+    <div class="flex items-center gap-2.5">
+      <template x-if="errorMsg">
+        <svg class="w-5 h-5 text-rose-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+        </svg>
+      </template>
+      <template x-if="successMsg">
+        <svg class="w-5 h-5 text-emerald-500 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
+        </svg>
+      </template>
+      <span x-text="errorMsg || successMsg"></span>
+    </div>
+    <button @click="errorMsg = ''; successMsg = ''" class="text-slate-400 hover:text-slate-600 p-1">
+      <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+      </svg>
+    </button>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 1. SCREEN: DISCOVERY (Enter School Code)                -->
+  <!-- ======================================================== -->
+  <div x-show="screen === 'discovery'" class="min-h-full flex flex-col justify-between p-6 max-w-md mx-auto">
+    <div class="flex justify-end pt-safe">
+      <button @click="showSettings = !showSettings" class="text-slate-400 hover:text-slate-600 p-2 rounded-full">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Central URL Settings Modal -->
+    <div x-show="showSettings" class="mb-6 p-4 bg-white border border-slate-200 rounded-2xl shadow-sm">
+      <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-2">Central API Host</h3>
+      <div class="flex gap-2">
+        <input type="text" x-model="centralUrl" class="w-full text-xs px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono">
+        <button @click="saveCentralUrl()" class="px-3 py-1.5 bg-indigo-600 text-white text-xs font-medium rounded-lg hover:bg-indigo-700">Save</button>
+      </div>
+    </div>
+
+    <div class="my-auto text-center space-y-6">
+      <div class="w-20 h-20 bg-indigo-600 rounded-3xl mx-auto flex items-center justify-center shadow-indigo-200 shadow-xl">
+        <svg class="w-10 h-10 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path d="M12 14l9-5-9-5-9 5 9 5z"/>
+          <path d="M12 14l6.16-3.422a12.083 12.083 0 01.665 6.479A11.952 11.952 0 0012 20.055a11.952 11.952 0 00-6.824-2.998 12.078 12.078 0 01.665-6.479L12 14z"/>
+        </svg>
+      </div>
+      <div>
+        <h1 class="text-2xl font-bold tracking-tight text-slate-900">Campus Control</h1>
+        <p class="text-sm text-slate-500 mt-1.5">Enter your school subdomain or unique code</p>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-left text-xs font-semibold text-slate-600 mb-1.5">School Code</label>
+          <div class="relative">
+            <input type="text" x-model="schoolCode" placeholder="e.g. dhakamodel"
+                   @keydown.enter="handleDiscover()"
+                   class="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-base font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 transition">
+            <span class="absolute right-3.5 top-3.5 text-xs text-slate-400 font-mono font-semibold">.school.test</span>
+          </div>
+        </div>
+
+        <button @click="handleDiscover()" :disabled="loading"
+                class="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-xl shadow-lg shadow-indigo-200 transition flex items-center justify-center gap-2">
+          <template x-if="loading">
+            <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </template>
+          <span>Connect to School</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="text-center text-xs text-slate-400 pb-safe">
+      Instant Portal • Mobile Web & PWA
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- 2. SCREEN: LOGIN                                         -->
+  <!-- ======================================================== -->
+  <div x-show="screen === 'login'" class="min-h-full flex flex-col justify-between p-6 max-w-md mx-auto">
+    <div class="pt-safe flex items-center justify-between">
+      <button @click="changeSchool()" class="flex items-center gap-1.5 text-xs font-semibold text-slate-500 hover:text-indigo-600 bg-white border border-slate-200 px-3 py-1.5 rounded-full shadow-sm">
+        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7"/>
+        </svg>
+        <span>Change School</span>
+      </button>
+
+      <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100" 
+            x-text="school?.name || 'School Selected'"></span>
+    </div>
+
+    <div class="my-auto space-y-6">
+      <div class="text-center">
+        <h2 class="text-2xl font-bold tracking-tight text-slate-900">Welcome Back</h2>
+        <p class="text-sm text-slate-500 mt-1">Sign in with your student, guardian, or teacher email</p>
+      </div>
+
+      <div class="space-y-4">
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">Email Address</label>
+          <input type="email" x-model="email" placeholder="email@example.com"
+                 class="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-base font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 transition">
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-600 mb-1.5">Password</label>
+          <div class="relative">
+            <input :type="showPassword ? 'text' : 'password'" x-model="password" placeholder="••••••••"
+                   @keydown.enter="handleLogin()"
+                   class="w-full px-4 py-3.5 bg-white border border-slate-200 rounded-xl text-base font-medium shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-600 focus:border-indigo-600 transition">
+            <button type="button" @click="showPassword = !showPassword" class="absolute right-3.5 top-3.5 text-slate-400 hover:text-slate-600">
+              <svg x-show="!showPassword" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+              </svg>
+              <svg x-show="showPassword" class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l18 18"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+        <button @click="handleLogin()" :disabled="loading"
+                class="w-full py-3.5 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-semibold rounded-xl shadow-lg shadow-indigo-200 transition flex items-center justify-center gap-2">
+          <template x-if="loading">
+            <svg class="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+          </template>
+          <span>Sign In</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="text-center text-xs text-slate-400 pb-safe">
+      Protected with Sanctum API
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- AUTHENTICATED WRAPPER                                   -->
+  <!-- ======================================================== -->
+  <div x-show="['dashboard', 'attendance', 'notices', 'invoices'].includes(screen)" class="min-h-full flex flex-col pb-24">
+
+    <!-- Sticky Top Header -->
+    <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-200/80 px-4 py-3 pt-safe flex items-center justify-between">
+      <div class="flex items-center gap-2.5">
+        <div class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold text-sm shadow-sm">
+          <span x-text="(school?.name || 'S').charAt(0)"></span>
+        </div>
+        <div>
+          <h2 class="text-xs font-bold text-slate-900 leading-tight" x-text="school?.name || 'School'"></h2>
+          <span class="text-[10px] text-slate-400 block" x-text="user?.email || 'Logged In'"></span>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-2">
+        <button @click="loadAllData()" class="p-2 text-slate-400 hover:text-indigo-600 rounded-full hover:bg-slate-100 transition" title="Refresh">
+          <svg class="w-4 h-4" :class="loading ? 'animate-spin text-indigo-600' : ''" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/>
+          </svg>
+        </button>
+        <button @click="handleLogout()" class="p-2 text-slate-400 hover:text-rose-600 rounded-full hover:bg-rose-50 transition" title="Log Out">
+          <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+          </svg>
+        </button>
+      </div>
+    </header>
+
+    <!-- MAIN SCROLLABLE CONTENT -->
+    <main class="flex-1 p-4 max-w-lg mx-auto w-full space-y-5">
+
+      <!-- ============================================== -->
+      <!-- TAB 1: DASHBOARD                               -->
+      <!-- ============================================== -->
+      <div x-show="screen === 'dashboard'" class="space-y-4">
+        
+        <!-- Welcome User Card -->
+        <div class="bg-gradient-to-br from-indigo-600 to-indigo-700 text-white p-5 rounded-2xl shadow-lg shadow-indigo-100 flex items-center justify-between">
+          <div>
+            <span class="inline-block px-2 py-0.5 rounded-full text-[10px] font-semibold tracking-wide uppercase bg-white/20 text-white mb-1.5"
+                  x-text="isTeacher ? 'Teacher / Staff' : (user?.type || 'Student')">
+            </span>
+            <h1 class="text-xl font-bold" x-text="user?.name || 'User'"></h1>
+            <p class="text-xs text-indigo-100 mt-0.5">Academic Session 2026-2027</p>
+          </div>
+          <div class="w-12 h-12 rounded-2xl bg-white/10 border border-white/20 flex items-center justify-center font-bold text-lg text-white">
+            <span x-text="(user?.name || 'U').charAt(0)"></span>
+          </div>
+        </div>
+
+        <!-- TEACHER ONLY: Student ID Card Scanner CTA -->
+        <template x-if="isTeacher">
+          <div class="space-y-3">
+            <div @click="openScanner()" 
+                 class="cursor-pointer bg-emerald-600 hover:bg-emerald-700 active:scale-[0.98] transition-all p-4 rounded-2xl text-white shadow-md shadow-emerald-200 flex items-center justify-between">
+              <div class="flex items-center gap-3.5">
+                <div class="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center">
+                  <svg class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                  </svg>
+                </div>
+                <div>
+                  <h3 class="text-base font-bold leading-tight">Scan Student ID Card</h3>
+                  <p class="text-xs text-emerald-100">Teacher attendance scanner for classes</p>
+                </div>
+              </div>
+              <span class="p-2.5 rounded-xl bg-white/20">
+                <svg class="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"/>
+                </svg>
+              </span>
+            </div>
+
+            <!-- Scanned Students Today Counter / Feed -->
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-sm font-bold text-slate-900">Scanned Today</h3>
+                  <span class="text-xs text-slate-400">Recorded in this session</span>
+                </div>
+                <span class="text-lg font-bold px-3 py-1 rounded-full bg-emerald-100 text-emerald-700" 
+                      x-text="todayScannedStudents.length + ' Students'"></span>
+              </div>
+              <div class="space-y-2 max-h-48 overflow-y-auto">
+                <template x-for="st in todayScannedStudents" :key="st.time">
+                  <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                    <div>
+                      <span class="font-bold text-slate-800" x-text="'Student ID: ' + st.code"></span>
+                      <span class="text-[10px] text-slate-400 block" x-text="st.timeFormatted"></span>
+                    </div>
+                    <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-100 text-emerald-700">Present</span>
+                  </div>
+                </template>
+                <div x-show="!todayScannedStudents.length" class="text-center text-xs text-slate-400 py-3">
+                  No students scanned yet. Tap button above to begin scanning.
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- STUDENT / GUARDIAN STATS (Hidden for Teachers) -->
+        <template x-if="!isTeacher">
+          <div class="space-y-4">
+            <!-- 3 Quick Stats Cards -->
+            <div class="grid grid-cols-3 gap-2.5">
+              <div @click="navigate('attendance')" class="cursor-pointer bg-white p-3 rounded-2xl border border-slate-100 shadow-sm text-center hover:border-indigo-200 transition">
+                <span class="text-xs text-slate-400 block mb-1">Attendance</span>
+                <span class="text-lg font-bold text-emerald-600 block" x-text="attendancePercentage"></span>
+                <span class="text-[10px] text-slate-400">Rate</span>
+              </div>
+              <div @click="navigate('invoices')" class="cursor-pointer bg-white p-3 rounded-2xl border border-slate-100 shadow-sm text-center hover:border-indigo-200 transition">
+                <span class="text-xs text-slate-400 block mb-1">Invoices</span>
+                <span class="text-lg font-bold text-amber-600 block" x-text="pendingInvoicesCount"></span>
+                <span class="text-[10px] text-slate-400">Pending</span>
+              </div>
+              <div @click="navigate('notices')" class="cursor-pointer bg-white p-3 rounded-2xl border border-slate-100 shadow-sm text-center hover:border-indigo-200 transition">
+                <span class="text-xs text-slate-400 block mb-1">Notices</span>
+                <span class="text-lg font-bold text-indigo-600 block" x-text="notices.length"></span>
+                <span class="text-[10px] text-slate-400">Published</span>
+              </div>
+            </div>
+
+            <!-- Recent Attendance Widget -->
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-3">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-slate-900">Recent Attendance</h3>
+                <button @click="navigate('attendance')" class="text-xs text-indigo-600 font-semibold hover:underline">History</button>
+              </div>
+              <div class="space-y-2">
+                <template x-for="att in attendance.slice(0, 3)" :key="att.id">
+                  <div class="p-2.5 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                    <div>
+                      <span class="font-medium text-slate-800 block" x-text="att.date || 'Today'"></span>
+                      <span class="text-[10px] text-slate-400" x-text="'Check-in: ' + (att.in_time || '09:00 AM')"></span>
+                    </div>
+                    <span class="px-2.5 py-0.5 rounded-full text-[10px] font-semibold"
+                          :class="(att.status || '').toLowerCase() === 'present' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+                          x-text="att.status || 'Present'"></span>
+                  </div>
+                </template>
+                <div x-show="!attendance.length" class="text-center text-xs text-slate-400 py-3">No attendance logs available.</div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- Notices Widget (Visible to Both) -->
+        <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-3">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-slate-900">Latest Notices</h3>
+            <button @click="navigate('notices')" class="text-xs text-indigo-600 font-semibold hover:underline">View All</button>
+          </div>
+          <div class="space-y-2">
+            <template x-for="n in notices.slice(0, 3)" :key="n.id">
+              <div @click="selectedNotice = n" class="cursor-pointer p-2.5 rounded-xl bg-slate-50 hover:bg-indigo-50/50 border border-slate-100 transition flex items-center justify-between">
+                <div>
+                  <h4 class="text-xs font-semibold text-slate-800 line-clamp-1" x-text="n.title"></h4>
+                  <span class="text-[10px] text-slate-400" x-text="n.created_at || 'Recent'"></span>
+                </div>
+                <span class="text-[10px] px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-medium">Read</span>
+              </div>
+            </template>
+            <div x-show="!notices.length" class="text-center text-xs text-slate-400 py-3">No published notices right now.</div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ============================================== -->
+      <!-- TAB 2: ATTENDANCE (VIEW / TEACHER SCANNER)      -->
+      <!-- ============================================== -->
+      <div x-show="screen === 'attendance'" class="space-y-4">
+        
+        <!-- TEACHER VIEW: SCANNER CONSOLE -->
+        <template x-if="isTeacher">
+          <div class="space-y-4">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-lg font-bold text-slate-900">Attendance Scanner</h2>
+                <p class="text-xs text-slate-500">Scan student physical ID cards</p>
+              </div>
+              <button @click="openScanner()" class="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-md shadow-emerald-200 flex items-center gap-1.5 transition">
+                <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+                </svg>
+                <span>Open Camera</span>
+              </button>
+            </div>
+
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 space-y-3">
+              <h3 class="text-xs font-bold uppercase tracking-wider text-slate-400">Session Attendance Log</h3>
+              <div class="divide-y divide-slate-100">
+                <template x-for="st in todayScannedStudents" :key="st.time">
+                  <div class="py-3 flex items-center justify-between text-xs">
+                    <div>
+                      <span class="font-bold text-slate-800 text-sm block" x-text="'Student ID: ' + st.code"></span>
+                      <span class="text-slate-400 text-[11px]" x-text="'Scanned at ' + st.timeFormatted"></span>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-xs font-bold bg-emerald-100 text-emerald-700">Present</span>
+                  </div>
+                </template>
+                <div x-show="!todayScannedStudents.length" class="py-8 text-center text-xs text-slate-400">
+                  No attendance scanned in this session. Tap "Open Camera" to begin.
+                </div>
+              </div>
+            </div>
+          </div>
+        </template>
+
+        <!-- STUDENT / GUARDIAN VIEW: PERSONAL ATTENDANCE LOG -->
+        <template x-if="!isTeacher">
+          <div class="space-y-4">
+            <h2 class="text-lg font-bold text-slate-900">My Attendance History</h2>
+            <div class="bg-white rounded-2xl border border-slate-100 shadow-sm divide-y divide-slate-100 overflow-hidden">
+              <template x-for="att in attendance" :key="att.id">
+                <div class="p-3.5 flex items-center justify-between text-xs">
+                  <div>
+                    <span class="font-bold text-slate-800 block text-sm" x-text="att.date"></span>
+                    <span class="text-slate-400 text-[11px]" x-text="'In: ' + (att.in_time || 'N/A') + ' • Out: ' + (att.out_time || 'N/A')"></span>
+                  </div>
+                  <span class="px-3 py-1 rounded-full text-xs font-bold"
+                        :class="(att.status || '').toLowerCase() === 'present' ? 'bg-emerald-100 text-emerald-700' : 'bg-rose-100 text-rose-700'"
+                        x-text="att.status"></span>
+                </div>
+              </template>
+              <div x-show="!attendance.length" class="p-6 text-center text-xs text-slate-400">
+                No attendance records found.
+              </div>
+            </div>
+          </div>
+        </template>
+
+      </div>
+
+      <!-- ============================================== -->
+      <!-- TAB 3: NOTICES                                 -->
+      <!-- ============================================== -->
+      <div x-show="screen === 'notices'" class="space-y-4">
+        <h2 class="text-lg font-bold text-slate-900">Notice Board</h2>
+        <div class="space-y-3">
+          <template x-for="n in notices" :key="n.id">
+            <div @click="selectedNotice = n" class="cursor-pointer bg-white p-4 rounded-2xl border border-slate-100 shadow-sm hover:border-indigo-200 transition space-y-2">
+              <div class="flex items-center justify-between">
+                <span class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700" x-text="n.category || 'General'"></span>
+                <span class="text-[10px] text-slate-400" x-text="n.created_at || 'Recent'"></span>
+              </div>
+              <h3 class="text-sm font-bold text-slate-900 leading-snug" x-text="n.title"></h3>
+              <p class="text-xs text-slate-500 line-clamp-2" x-text="n.content || n.description"></p>
+            </div>
+          </template>
+          <div x-show="!notices.length" class="bg-white p-6 rounded-2xl text-center text-xs text-slate-400">
+            No notices published right now.
+          </div>
+        </div>
+      </div>
+
+      <!-- ============================================== -->
+      <!-- TAB 4: INVOICES                                -->
+      <!-- ============================================== -->
+      <div x-show="screen === 'invoices'" class="space-y-4">
+        <h2 class="text-lg font-bold text-slate-900">Fee Invoices</h2>
+        <div class="space-y-3">
+          <template x-for="inv in invoices" :key="inv.id">
+            <div class="bg-white p-4 rounded-2xl border border-slate-100 shadow-sm space-y-3">
+              <div class="flex items-center justify-between">
+                <div>
+                  <span class="text-xs font-bold text-slate-900 block" x-text="inv.title || ('Invoice #' + inv.invoice_number)"></span>
+                  <span class="text-[10px] text-slate-400" x-text="'Due: ' + (inv.due_date || 'N/A')"></span>
+                </div>
+                <span class="px-2.5 py-0.5 rounded-full text-xs font-bold"
+                      :class="(inv.status || '').toLowerCase() === 'paid' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'"
+                      x-text="inv.status || 'Pending'"></span>
+              </div>
+              <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+                <span class="text-xs text-slate-500">Total Amount</span>
+                <span class="text-base font-bold text-slate-900" x-text="'$' + (inv.amount || '0.00')"></span>
+              </div>
+            </div>
+          </template>
+          <div x-show="!invoices.length" class="bg-white p-6 rounded-2xl text-center text-xs text-slate-400">
+            No fee invoices found.
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- ======================================================== -->
+    <!-- BALANCED 5-BUTTON BOTTOM NAVIGATION BAR (SCAN IN CENTER) -->
+    <!-- ======================================================== -->
+    <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/80 px-2 py-1 pb-safe max-w-lg mx-auto shadow-lg">
+      <div class="grid grid-cols-5 items-center text-center">
+        
+        <!-- Button 1: Home (Col 1) -->
+        <button @click="navigate('dashboard')" class="flex flex-col items-center justify-center py-1 transition cursor-pointer"
+                :class="screen === 'dashboard' ? 'text-indigo-600 font-bold' : 'text-slate-400 hover:text-slate-600'">
+          <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"/>
+          </svg>
+          <span class="text-[10px]">Home</span>
+        </button>
+
+        <!-- Button 2: Attendance (Col 2) -->
+        <button @click="navigate('attendance')" class="flex flex-col items-center justify-center py-1 transition cursor-pointer"
+                :class="screen === 'attendance' ? 'text-indigo-600 font-bold' : 'text-slate-400 hover:text-slate-600'">
+          <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          <span class="text-[10px]">Attendance</span>
+        </button>
+
+        <!-- Button 3: CENTER SCAN FLOATING BUTTON (Col 3 - 100% Mathematically Centered) -->
+        <div class="flex flex-col items-center justify-center -mt-6">
+          <button @click="handleCenterButton()" 
+                  class="w-14 h-14 rounded-full flex items-center justify-center text-white shadow-lg border-4 border-white transition transform active:scale-95 cursor-pointer"
+                  :class="isTeacher ? 'bg-gradient-to-tr from-emerald-600 to-emerald-500 hover:from-emerald-500 hover:to-emerald-400 shadow-emerald-200' : 'bg-gradient-to-tr from-indigo-600 to-indigo-500 hover:from-indigo-500 hover:to-indigo-400 shadow-indigo-200'"
+                  :title="isTeacher ? 'Scan Student ID' : 'My ID QR'">
+            <template x-if="isTeacher">
+              <svg class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v1m6 11h2m-6 0h-2v4m0-11v3m0 0h.01M12 12h4.01M16 20h4M4 12h4m12 0h.01M5 8h2a1 1 0 001-1V5a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1zm12 0h2a1 1 0 001-1V5a1 1 0 00-1-1h-2a1 1 0 00-1 1v2a1 1 0 001 1zM5 20h2a1 1 0 001-1v-2a1 1 0 00-1-1H5a1 1 0 00-1 1v2a1 1 0 001 1z"/>
+              </svg>
+            </template>
+            <template x-if="!isTeacher">
+              <svg class="w-7 h-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V8a2 2 0 00-2-2h-5m-4 0V5a2 2 0 114 0v1m-4 0a2 2 0 104 0m-5 8a2 2 0 100-4 2 2 0 000 4zm0 0c1.306 0 2.417.835 2.83 2M9 14a3.001 3.001 0 00-2.83 2M15 11h3m-3 4h2"/>
+              </svg>
+            </template>
+          </button>
+          <span class="text-[10px] font-bold text-slate-600 mt-0.5" x-text="isTeacher ? 'Scan' : 'My ID'"></span>
+        </div>
+
+        <!-- Button 4: Notices (Col 4) -->
+        <button @click="navigate('notices')" class="flex flex-col items-center justify-center py-1 transition cursor-pointer"
+                :class="screen === 'notices' ? 'text-indigo-600 font-bold' : 'text-slate-400 hover:text-slate-600'">
+          <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/>
+          </svg>
+          <span class="text-[10px]">Notices</span>
+        </button>
+
+        <!-- Button 5: Invoices (Col 5) -->
+        <button @click="navigate('invoices')" class="flex flex-col items-center justify-center py-1 transition cursor-pointer"
+                :class="screen === 'invoices' ? 'text-indigo-600 font-bold' : 'text-slate-400 hover:text-slate-600'">
+          <svg class="w-5 h-5 mb-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+          </svg>
+          <span class="text-[10px]">Invoices</span>
+        </button>
+
+      </div>
+    </nav>
+
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: TEACHER QR CAMERA SCANNER                         -->
+  <!-- ======================================================== -->
+  <div x-show="showScanner" 
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0"
+       x-transition:enter-end="opacity-100"
+       x-transition:leave="transition ease-in duration-150"
+       x-transition:leave-start="opacity-100"
+       x-transition:leave-end="opacity-0"
+       class="fixed inset-0 z-50 bg-black/90 flex flex-col justify-between p-4 pt-safe pb-safe">
+    
+    <!-- Top Bar -->
+    <div class="flex items-center justify-between text-white py-2">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-emerald-500 animate-ping"></span>
+          <span class="text-sm font-bold">Scanning Student ID Cards</span>
+        </div>
+        <span class="text-[11px] text-slate-300">Point at student physical ID badge</span>
+      </div>
+      <button @click="closeScanner()" class="p-2 rounded-full bg-white/20 text-white hover:bg-white/30">
+        <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Center Camera Viewfinder -->
+    <div class="my-auto w-full max-w-sm mx-auto">
+      <div class="relative bg-slate-900 rounded-3xl overflow-hidden shadow-2xl border-2 border-emerald-500/50">
+        <div id="qr-viewfinder" class="w-full aspect-square"></div>
+        
+        <template x-if="scanningStatus === 'error'">
+          <div class="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center p-6 text-center text-rose-400">
+            <svg class="w-12 h-12 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+            </svg>
+            <p class="text-xs font-semibold" x-text="scanResultMsg"></p>
+            <button @click="openScanner()" class="mt-4 px-4 py-2 bg-white/20 text-white text-xs rounded-xl font-bold">Try Again</button>
+          </div>
+        </template>
+      </div>
+
+      <div class="flex items-center justify-between mt-3 text-xs text-slate-300 px-2">
+        <span>Continuous Scan Mode</span>
+        <label class="relative inline-flex items-center cursor-pointer">
+          <input type="checkbox" x-model="continuousMode" class="sr-only peer">
+          <div class="w-9 h-5 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-600"></div>
+        </label>
+      </div>
+    </div>
+
+    <!-- Bottom Result Card -->
+    <div class="text-center pb-4">
+      <template x-if="scannedCode">
+        <div class="bg-white/10 backdrop-blur-md p-3.5 rounded-2xl text-white inline-block max-w-xs text-xs border border-white/20 shadow-lg">
+          <span class="text-emerald-400 font-bold block mb-1">Student Recorded</span>
+          <span class="font-mono text-slate-200" x-text="'ID: ' + scannedCode"></span>
+        </div>
+      </template>
+    </div>
+
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: STUDENT DIGITAL ID CARD                           -->
+  <!-- ======================================================== -->
+  <div x-show="showStudentIdModal" 
+       x-transition:enter="transition ease-out duration-200"
+       x-transition:enter-start="opacity-0 scale-95"
+       x-transition:enter-end="opacity-100 scale-100"
+       class="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+    <div @click.away="closeStudentIdModal()" class="bg-white rounded-3xl max-w-xs w-full p-6 text-center shadow-2xl space-y-4">
+      <div class="flex justify-between items-center">
+        <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-full" 
+              x-text="school?.name || 'School ID Card'"></span>
+        <button @click="closeStudentIdModal()" class="text-slate-400 hover:text-slate-600">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Student Photo / Avatar & Info -->
+      <div class="space-y-1">
+        <div class="w-16 h-16 rounded-2xl bg-indigo-600 text-white font-bold text-2xl flex items-center justify-center mx-auto shadow-md shadow-indigo-100">
+          <span x-text="(user?.name || 'S').charAt(0)"></span>
+        </div>
+        <h3 class="text-base font-bold text-slate-900 pt-2" x-text="user?.name || 'Student Name'"></h3>
+        <p class="text-xs text-slate-500" x-text="user?.email"></p>
+      </div>
+
+      <!-- QR Code Visual Box -->
+      <div class="p-4 bg-slate-50 border border-slate-200 rounded-2xl inline-block shadow-inner">
+        <!-- SVG Generated QR representation with Student ID -->
+        <svg class="w-36 h-36 mx-auto text-slate-900" viewBox="0 0 100 100" fill="currentColor">
+          <!-- Position Detection Squares -->
+          <rect x="5" y="5" width="28" height="28" fill="none" stroke="currentColor" stroke-width="6"/>
+          <rect x="13" y="13" width="12" height="12"/>
+          
+          <rect x="67" y="5" width="28" height="28" fill="none" stroke="currentColor" stroke-width="6"/>
+          <rect x="75" y="13" width="12" height="12"/>
+          
+          <rect x="5" y="67" width="28" height="28" fill="none" stroke="currentColor" stroke-width="6"/>
+          <rect x="13" y="75" width="12" height="12"/>
+
+          <!-- Stylized Data Matrix Dots -->
+          <rect x="42" y="8" width="6" height="6"/>
+          <rect x="52" y="8" width="6" height="6"/>
+          <rect x="42" y="22" width="6" height="6"/>
+          <rect x="52" y="28" width="6" height="6"/>
+          
+          <rect x="8" y="42" width="6" height="6"/>
+          <rect x="20" y="48" width="6" height="6"/>
+          <rect x="28" y="42" width="6" height="6"/>
+
+          <rect x="42" y="42" width="16" height="16" rx="2"/>
+          
+          <rect x="68" y="42" width="6" height="6"/>
+          <rect x="82" y="48" width="6" height="6"/>
+
+          <rect x="42" y="68" width="6" height="6"/>
+          <rect x="52" y="76" width="6" height="6"/>
+          <rect x="48" y="84" width="6" height="6"/>
+
+          <rect x="68" y="68" width="8" height="8"/>
+          <rect x="80" y="78" width="8" height="8"/>
+          <rect x="70" y="86" width="6" height="6"/>
+          <rect x="86" y="68" width="6" height="6"/>
+        </svg>
+        <span class="text-[11px] font-mono font-bold text-slate-700 block mt-2" x-text="'ID: ' + studentCode"></span>
+      </div>
+
+      <p class="text-[11px] text-slate-400">
+        Show this QR code to your teacher to mark attendance.
+      </p>
+
+      <button @click="closeStudentIdModal()" class="w-full py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold rounded-xl text-xs">
+        Done
+      </button>
+    </div>
+  </div>
+
+  <!-- ======================================================== -->
+  <!-- MODAL: NOTICE DETAILS                                    -->
+  <!-- ======================================================== -->
+  <div x-show="selectedNotice" 
+       class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-end sm:items-center justify-center p-4">
+    <div @click.away="selectedNotice = null" class="bg-white rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between">
+        <span class="text-xs font-semibold px-2.5 py-1 rounded-full bg-indigo-50 text-indigo-700" 
+              x-text="selectedNotice?.category || 'Notice'"></span>
+        <button @click="selectedNotice = null" class="text-slate-400 hover:text-slate-600">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+      <div>
+        <h3 class="text-lg font-bold text-slate-900" x-text="selectedNotice?.title"></h3>
+        <span class="text-xs text-slate-400 block mt-1" x-text="selectedNotice?.created_at"></span>
+      </div>
+      <div class="text-sm text-slate-600 whitespace-pre-wrap leading-relaxed" x-text="selectedNotice?.content || selectedNotice?.description"></div>
+      <button @click="selectedNotice = null" class="w-full py-3 bg-slate-100 hover:bg-slate-200 text-slate-800 font-semibold rounded-xl text-xs">Close</button>
+    </div>
+  </div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
