@@ -66,6 +66,15 @@ Alpine.data('schoolApp', () => ({
     return this.user?.id || this.user?.student_id || 'STU-1024';
   },
 
+  get domainSuffix() {
+    try {
+      const url = new URL(this.centralUrl);
+      return '.' + url.hostname;
+    } catch {
+      return '.campuscontrol.net';
+    }
+  },
+
   handleHashChange() {
     const hash = window.location.hash.replace('#', '');
     if (['dashboard', 'attendance', 'notices', 'invoices'].includes(hash)) {
@@ -103,6 +112,7 @@ Alpine.data('schoolApp', () => ({
 
   saveCentralUrl() {
     api.setCentralUrl(this.centralUrl);
+    this.centralUrl = api.getCentralUrl();
     this.showSettings = false;
     this.showToast('Central API URL updated');
   },

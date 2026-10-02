@@ -25,7 +25,7 @@ Can be hosted for **free on static hosting** (Cloudflare Pages, Vercel, Netlify)
 - **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
 - **Build Tool**: [Vite 6](https://vitejs.dev/)
 - **Camera QR Scanner**: [html5-qrcode](https://github.com/mebjas/html5-qrcode)
-- **Backend API**: Connects to the Central & Tenant Laravel SaaS API (`school.test` or production domain)
+- **Backend API**: Connects to the Central & Tenant Laravel SaaS API (`https://campuscontrol.net` in production, or `http://school.test` during local development)
 
 ---
 
@@ -84,7 +84,8 @@ npx cap open android
 
 ## 🌐 API Configuration
 
-By default in local development, the app connects to `http://school.test`.
-To change the Central API endpoint in production:
+By default, the app connects to the production Central API: `https://campuscontrol.net`.
+When running on `localhost` or `.test` domains, it automatically connects to `http://school.test`.
+To manually override the Central API endpoint:
 - Tap the **Settings icon (gear)** on the initial school discovery screen.
-- Or set `localStorage.setItem('cc_central_url', 'https://yourdomain.com')`.
+- Or set `localStorage.setItem('cc_central_url', 'https://campuscontrol.net')`.

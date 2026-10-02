@@ -64,10 +64,10 @@ This repository contains **School App**, a lightweight, high-performance Single-
 - Always clean up event listeners and timers when components or views transition.
 
 ### 2. Multi-Tenant API Communication (`src/api.js`)
-- **Central API**: Used for tenant discovery via `/api/tenant/discover`. Default is `http://school.test` locally, configurable via localStorage (`cc_central_url`).
+- **Central API**: Used for tenant discovery via `/api/tenant/discover`. Default is `https://campuscontrol.net` in production and `http://school.test` during local dev, configurable via localStorage (`cc_central_url`).
 - **Tenant API**: Once discovered, each school has its own endpoint (`tenantApiUrl(...)`).
 - **Authentication**: Uses Sanctum Bearer tokens stored in `localStorage` under `cc_token`. User profile and active school tenant are stored under `cc_user` and `cc_school`.
-- **Local Dev vs Production**: `src/api.js` automatically normalizes `.localhost` subdomains to `.school.test` during local testing. Preserve this behavior when editing network logic.
+- **Local Dev vs Production**: `src/api.js` automatically detects localhost/.test environments and normalizes `.localhost` subdomains to `.school.test` during local testing, while using `https://campuscontrol.net` and HTTPS tenant endpoints in production. Preserve this behavior when editing network logic.
 - Always handle API exceptions with clear, user-friendly error banners or messages.
 
 ### 3. QR Attendance Scanner (`src/scanner.js`)

@@ -1,8 +1,31 @@
 // API Client for Central & Tenant School APIs
 
+const DEFAULT_PRODUCTION_URL = 'https://campuscontrol.net';
+const DEFAULT_LOCAL_URL = 'http://school.test';
+
 export const api = {
+  isLocalHost() {
+    if (typeof window === 'undefined') return false;
+    const host = window.location.hostname;
+    return host === 'localhost' || host === '127.0.0.1' || host.endsWith('.test');
+  },
+
   getCentralUrl() {
-    return localStorage.getItem('cc_central_url') || 'http://school.test';
+    const saved = localStorage.getItem('cc_central_url');
+    if (saved) {
+      // Discard stale local test URLs when running in production
+      if (!this.isLocalHost() && (saved.includes('.test') || saved.includes('localhost'))) {
+        localStorage.removeItem('cc_central_url');
+      } else {
+        return saved;
+      }
+    }
+
+    if (import.meta.env?.VITE_CENTRAL_URL) {
+      return import.meta.env.VITE_CENTRAL_URL;
+    }
+
+    return this.isLocalHost() ? DEFAULT_LOCAL_URL : DEFAULT_PRODUCTION_URL;
   },
 
   setCentralUrl(url) {
@@ -64,6 +87,10 @@ export const api = {
     let base = school.api_url.replace(/\/+$/, '');
     if (this.getCentralUrl().includes('school.test') && base.includes('.localhost')) {
       base = base.replace('.localhost', '.school.test');
+    }
+    // Upgrade http to https when the web portal itself is served securely
+    if (typeof window !== 'undefined' && window.location.protocol === 'https:' && base.startsWith('http://') && !this.isLocalHost()) {
+      base = base.replace('http://', 'https://');
     }
     return endpoint ? `${base}/${endpoint.replace(/^\/+/, '')}` : base;
   },
