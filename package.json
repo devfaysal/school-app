@@ -1,20 +1,32 @@
 {
   "name": "school-app",
-  "private": true,
   "version": "1.0.0",
-  "type": "module",
+  "description": "A high-performance, responsive Single-Page Application (SPA) built for students, parents, and teachers. Can be hosted for **free on static hosting** (Cloudflare Pages, Vercel, Netlify) or packaged as an **Android APK / Google Play Store App** using Capacitor or TWA.",
+  "main": "index.js",
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
-    "preview": "vite preview"
+    "sync": "cap sync android",
+    "open": "cap open android",
+    "build:bundle": "cd android && ./gradlew bundleRelease",
+    "build:apk": "cd android && ./gradlew assembleRelease"
   },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/devfaysal/school-app.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/devfaysal/school-app/issues"
+  },
+  "homepage": "https://github.com/devfaysal/school-app#readme",
   "dependencies": {
-    "alpinejs": "^3.14.8",
-    "html5-qrcode": "^2.3.8"
-  },
-  "devDependencies": {
-    "@tailwindcss/vite": "^4.0.0",
-    "tailwindcss": "^4.0.0",
-    "vite": "^6.0.0"
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/network": "^8.0.1",
+    "@capacitor/splash-screen": "^8.0.2",
+    "@capacitor/status-bar": "^8.0.4"
   }
 }

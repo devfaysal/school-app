@@ -1,0 +1,26 @@
+{
+  "appId": "net.campuscontrol.portal",
+  "appName": "Campus Control",
+  "webDir": "www",
+  "server": {
+    "url": "https://campuscontrol.net/portal",
+    "cleartext": false,
+    "allowNavigation": [
+      "campuscontrol.net",
+      "*.campuscontrol.net"
+    ]
+  },
+  "android": {
+    "allowMixedContent": false,
+    "captureInput": true,
+    "webContentsDebuggingEnabled": false
+  },
+  "plugins": {
+    "SplashScreen": {
+      "launchShowDuration": 2000,
+      "launchAutoHide": true,
+      "backgroundColor": "#1E3A8A",
+      "androidSplashResourceName": "splash"
+    }
+  }
+}

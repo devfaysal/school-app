@@ -1,91 +1,63 @@
-# School App (Lightweight Mobile & Web Portal)
+# 📱 Campus Control Android App
 
-A high-performance, responsive Single-Page Application (SPA) built for students, parents, and teachers.
-Can be hosted for **free on static hosting** (Cloudflare Pages, Vercel, Netlify) or packaged as an **Android APK / Google Play Store App** using Capacitor or TWA.
+Official Android wrapper for **Campus Control Portal** (`https://campuscontrol.net/portal`).
 
----
-
-## 🚀 Features
-
-- **School Discovery**: Connect to any school tenant via subdomain or school code (e.g. `dhakamodel`).
-- **Sanctum Authentication**: Secure login with JWT/Sanctum bearer token.
-- **Attendance Record & QR Scanner**:
-  - Live in-browser / in-app camera QR code scanner powered by `html5-qrcode`.
-  - Point phone camera to scan attendance code and record attendance instantly.
-- **Notices Board**: Real-time school and class announcements with full modal previews.
-- **Fee Invoices**: View pending, paid, and overdue fee invoices.
-- **PWA Ready**: Works offline/online, installable on iOS (Safari "Add to Home Screen") and Android without app store review.
-- **Ultra-lightweight**: Total compressed build size is ~125 kB.
+Powered by **Capacitor 8** and native Android components to provide seamless webview integration, session persistence across multi-tenant school subdomains, hardware back button navigation, and native file download handling for student report cards, ID cards, and fee receipts.
 
 ---
 
-## 🛠️ Tech Stack
+## 🏗️ Architecture
 
-- **Framework**: Vanilla JS + [Alpine.js](https://alpinejs.dev/)
-- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
-- **Build Tool**: [Vite 6](https://vitejs.dev/)
-- **Camera QR Scanner**: [html5-qrcode](https://github.com/mebjas/html5-qrcode)
-- **Backend API**: Connects to the Central & Tenant Laravel SaaS API (`https://campuscontrol.net` in production, or `http://school.test` during local development)
+- **Host URL**: `https://campuscontrol.net/portal`
+- **Subdomain Navigation**: Configured in `capacitor.config.json` to allow all `*.campuscontrol.net` tenant subdomains to stay inside the native app shell.
+- **Cross-Domain Cookies**: `CookieManager` is configured in `MainActivity.java` with `setAcceptThirdPartyCookies(true)` so Laravel sessions persist across school redirects.
+- **File Downloads**: Uses Android's native `DownloadManager` for PDF downloads (Report cards, vouchers, receipts, ID cards).
+- **Target SDK**: Android 16 (API 36 / Android 15 ready), fully compliant with Google Play Store 2026+ requirements.
 
 ---
 
-## 💻 Local Development
+## 🚀 Development & Building
 
+### 1. Install Dependencies
 ```bash
-cd /var/www/school-app
 npm install
-npm run dev
 ```
 
-Visit the local server (default: `http://localhost:3000`).
-
----
-
-## 📦 Production Static Build
-
-To build the static distribution for deployment:
-
+### 2. Sync Web & Capacitor Config
 ```bash
-npm run build
+npm run sync
 ```
 
-This compiles everything into the `/var/www/school-app/dist` folder:
-- Upload the `dist/` folder directly to **Cloudflare Pages**, **Vercel**, **Netlify**, or AWS S3.
-- Build command: `npm run build`
-- Output directory: `dist`
-
----
-
-## 📱 Publishing to Google Play Store (via Capacitor)
-
-To convert this static web portal into an Android APK / Android App Bundle (`.aab`) for the Google Play Store:
-
+### 3. Open in Android Studio
 ```bash
-cd /var/www/school-app
-
-# 1. Install Capacitor
-npm install @capacitor/core @capacitor/cli @capacitor/android
-
-# 2. Initialize Capacitor
-npx cap init "School Portal" com.campuscontrol.portal --web-dir dist
-
-# 3. Add Android platform
-npx cap add android
-
-# 4. Sync web build
-npm run build
-npx cap sync
-
-# 5. Open in Android Studio to build APK or signed AAB for Play Store
-npx cap open android
+npm run open
 ```
+Or open the `android/` directory directly in Android Studio.
+
+### 4. Automated Cloud Builds (GitHub Actions)
+Pushing to the `main` branch automatically triggers `.github/workflows/build-android.yml`:
+- Compiles `app-debug.apk` (ready to test on any Android phone).
+- Compiles `app-release.aab` (ready to upload to Google Play Console).
+- Artifacts can be downloaded directly from GitHub Actions summary page.
 
 ---
 
-## 🌐 API Configuration
+## 📦 Google Play Store Release Checklist
 
-By default, the app connects to the production Central API: `https://campuscontrol.net`.
-When running on `localhost` or `.test` domains, it automatically connects to `http://school.test`.
-To manually override the Central API endpoint:
-- Tap the **Settings icon (gear)** on the initial school discovery screen.
-- Or set `localStorage.setItem('cc_central_url', 'https://campuscontrol.net')`.
+1. **Google Play Console Account**:
+   - Register at [play.google.com/console](https://play.google.com/console).
+2. **Signing Keystore**:
+   - Generate signing key:
+     ```bash
+     keytool -genkey -v -keystore campuscontrol-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias campuscontrol
+     ```
+   - Store securely.
+3. **Build Release AAB**:
+   ```bash
+   npm run build:bundle
+   ```
+   Output: `android/app/build/outputs/bundle/release/app-release.aab`.
+4. **App Content Declarations**:
+   - **Privacy Policy**: Provide URL (e.g. `https://campuscontrol.net/privacy`).
+   - **App Access Credentials**: Provide reviewer test account (School code, Login, and Password).
+   - **Data Safety**: Declare account authentication & student records (encrypted in transit).

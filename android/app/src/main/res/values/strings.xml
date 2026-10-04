@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Campus Control</string>
+    <string name="title_activity_main">Campus Control</string>
+    <string name="package_name">net.campuscontrol.portal</string>
+    <string name="custom_url_scheme">net.campuscontrol.portal</string>
+</resources>
